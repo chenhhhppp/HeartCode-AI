@@ -24,7 +24,7 @@ public class ThrowUtils {
      * @param condition 判断条件
      * @param errorCode 业务异常
      */
-    public static void throwIF(boolean condition, ErrorCode errorCode) {
+    public static void throwIf(boolean condition, ErrorCode errorCode) {
         throwIf(condition, new BusinessException(errorCode));
     }
 
@@ -35,7 +35,7 @@ public class ThrowUtils {
      * @param errorCode 业务异常
      * @param message   异常信息
      */
-    public static void throwIF(boolean condition, ErrorCode errorCode, String message) {
+    public static void throwIf(boolean condition, ErrorCode errorCode, String message) {
         throwIf(condition, new BusinessException(errorCode, message));
     }
 }
