@@ -1,11 +1,13 @@
 spring:
   application:
     name: HeartCode
+  profiles:
+    active: local
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/heartcode?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
-    password: Qq114877
+    password: <Your Password>
 server:
   port: 8123
   servlet:
@@ -18,3 +20,12 @@ knife4j:
   enable: true
   setting:
     language: zh-CN
+# AI
+langchain4j:
+  open-ai:
+    chat-model:
+      api-key: <Your API Key>
+      base-url: https://open.bigmodel.cn/api/paas/v4/
+      model-name: glm-5.2
+      log-requests: true
+      log-responses: true
