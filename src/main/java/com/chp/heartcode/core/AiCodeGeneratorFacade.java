@@ -3,6 +3,8 @@ package com.chp.heartcode.core;
 import com.chp.heartcode.ai.AiCodeGeneratorService;
 import com.chp.heartcode.ai.model.HtmlCodeResult;
 import com.chp.heartcode.ai.model.MultiFileCodeResult;
+import com.chp.heartcode.core.parser.CodeParserExecutor;
+import com.chp.heartcode.core.saver.CodeFileSaverExecutor;
 import com.chp.heartcode.exception.BusinessException;
 import com.chp.heartcode.exception.ErrorCode;
 import com.chp.heartcode.model.enums.CodeGenTypeEnum;
@@ -36,8 +38,14 @@ public class AiCodeGeneratorFacade {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型为空");
         }
         return switch (codeGenTypeEnum) {
-            case HTML -> generateAndSaveHtmlCode(userMessage);
-            case MULTI_FILE -> generateAndSaveMultiFileCode(userMessage);
+            case HTML -> {
+                HtmlCodeResult result = aiCodeGeneratorService.generateHtmlCode(userMessage);
+                yield CodeFileSaverExecutor.executeSaver(result, CodeGenTypeEnum.HTML);
+            }
+            case MULTI_FILE -> {
+                MultiFileCodeResult result = aiCodeGeneratorService.generateMultiFileCode(userMessage);
+                yield CodeFileSaverExecutor.executeSaver(result, CodeGenTypeEnum.MULTI_FILE);
+            }
             default -> {
                 String errorMessage = "不支持的生成类型: " + codeGenTypeEnum.getValue();
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMessage);
@@ -51,6 +59,7 @@ public class AiCodeGeneratorFacade {
      * @param userMessage 用户提示词
      * @return 保存的目录
      */
+    @Deprecated
     private File generateAndSaveHtmlCode(String userMessage) {
         HtmlCodeResult result = aiCodeGeneratorService.generateHtmlCode(userMessage);
         return CodeFileSaver.saveHtmlCodeResult(result);
@@ -62,6 +71,7 @@ public class AiCodeGeneratorFacade {
      * @param userMessage 用户提示词
      * @return 保存的目录
      */
+    @Deprecated
     private File generateAndSaveMultiFileCode(String userMessage) {
         MultiFileCodeResult result = aiCodeGeneratorService.generateMultiFileCode(userMessage);
         return CodeFileSaver.saveMultiFileCodeResult(result);
@@ -81,8 +91,14 @@ public class AiCodeGeneratorFacade {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型不能为空");
         }
         return switch (codeGenTypeEnum) {
-            case HTML -> generateAndSaveHtmlCodeStream(userMessage);
-            case MULTI_FILE -> generateAndSaveMultiFileCodeStream(userMessage);
+            case HTML -> {
+                Flux<String> codeStream = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
+                yield processCodeStream(codeStream, CodeGenTypeEnum.HTML);
+            }
+            case MULTI_FILE -> {
+                Flux<String> codeStream = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
+                yield processCodeStream(codeStream, CodeGenTypeEnum.MULTI_FILE);
+            }
             default -> {
                 String errorMessage = "不支持的生成类型：" + codeGenTypeEnum.getValue();
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMessage);
@@ -172,5 +188,34 @@ public class AiCodeGeneratorFacade {
             log.warn("大模型返回内容非 JSON 格式，按原始 Markdown 处理");
         }
         return rawContent;
+    }
+
+    // 优化门面类
+
+    private Flux<String> processCodeStream(Flux<String> codeStream, CodeGenTypeEnum codeGenType) {
+        StringBuilder codeBuilder = new StringBuilder();
+        return codeStream.doOnNext(codeBuilder::append)
+                .doOnComplete(() -> {
+                    // 流式返回完成后保存代码
+                    try {
+
+                        // todo 在 Facade 层剥离 JSON 外壳
+                        String rawContent = codeBuilder.toString();
+
+                        String completeMultiFileCode = extractAnswerFromJson(rawContent);
+
+                        // 使用执行器解析代码
+                        Object parsedResult = CodeParserExecutor.executeParser(completeMultiFileCode, codeGenType);
+
+                        // todo
+                        log.info("大模型返回的完整内容：\n {}", completeMultiFileCode);
+
+                        // 使用执行器保存代码
+                        File savedDir = CodeFileSaverExecutor.executeSaver(parsedResult, codeGenType);
+                        log.info("保存成功，路劲为: {}", savedDir.getAbsolutePath());
+                    } catch (Exception e) {
+                        log.error("保存失败: {}", e.getMessage(), e);
+                    }
+                });
     }
 }
