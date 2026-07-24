@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { listUserVoByPage, deleteUser } from '@/api/userController'
-import { reactive, ref, onMounted, computed } from 'vue'
-import { message } from 'ant-design-vue'
-import { UserOutlined } from '@ant-design/icons-vue'
+import { reactive, ref, onMounted, computed, createVNode } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import { ExclamationCircleOutlined, UserOutlined } from '@ant-design/icons-vue'
 
 // 数据
 const data = ref<API.UserVO[]>([])
@@ -123,18 +123,35 @@ const doSearch = () => {
 }
 
 // 删除数据
-const doDelete = async (id: number) => {
+const doDelete = (id: string | number, userName?: string) => {
   if (!id) {
     return
   }
-  const res = await deleteUser({ id })
-  if (res.data.code === 0) {
-    message.success('删除成功')
-    // 刷新数据
-    fetchData()
-  } else {
-    message.error('删除失败，' + res.data.message)
-  }
+
+  const displayName = userName || `ID: ${id}`
+  Modal.confirm({
+    title: '确认删除',
+    icon: createVNode(ExclamationCircleOutlined),
+    content: `确定要删除用户 "${displayName}" 吗？此操作不可恢复。`,
+    okText: '确认删除',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // 直接发送原始 id（字符串），避免 Number 转换导致雪花算法 ID 精度丢失
+        const res = await deleteUser({ id })
+        if (res.data.code === 0) {
+          message.success('删除成功')
+          // 刷新数据
+          fetchData()
+        } else {
+          message.error('删除失败，' + res.data.message)
+        }
+      } catch (error) {
+        message.error('删除失败')
+      }
+    },
+  })
 }
 
 // 页面加载时请求一次
@@ -203,7 +220,7 @@ onMounted(() => {
             danger
             type="link"
             size="small"
-            @click="doDelete(record.id!)"
+            @click="doDelete(record.id!, record.userName)"
           >
             删除
           </a-button>

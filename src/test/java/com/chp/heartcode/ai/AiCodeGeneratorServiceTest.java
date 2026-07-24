@@ -27,7 +27,7 @@ class AiCodeGeneratorServiceTest {
 
     @Test
     void generateMultiFileCode() {
-        MultiFileCodeResult multiFileCode = aiCodeGeneratorService.generateMultiFileCode("生成一个留言板页面");
+        MultiFileCodeResult multiFileCode = aiCodeGeneratorService.generateMultiFileCode("日历表，代码少于50行");
         Assertions.assertNotNull(multiFileCode);
     }
 }
