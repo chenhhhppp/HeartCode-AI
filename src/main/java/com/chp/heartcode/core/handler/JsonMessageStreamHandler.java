@@ -10,8 +10,6 @@ import com.chp.heartcode.ai.model.message.ToolExecutedMessage;
 import com.chp.heartcode.ai.model.message.ToolRequestMessage;
 import com.chp.heartcode.ai.tools.BaseTool;
 import com.chp.heartcode.ai.tools.ToolManager;
-import com.chp.heartcode.constant.AppConstant;
-import com.chp.heartcode.core.builder.VueProjectBuilder;
 import com.chp.heartcode.model.entity.User;
 import com.chp.heartcode.model.enums.MessageTypeEnum;
 import com.chp.heartcode.service.ChatHistoryService;
@@ -32,9 +30,6 @@ import java.util.Set;
 @Slf4j
 @Component
 public class JsonMessageStreamHandler {
-
-    @Resource
-    private VueProjectBuilder vueProjectBuilder;
 
     /**
      * 工具管理器，根据工具名称获取工具实例
@@ -71,31 +66,6 @@ public class JsonMessageStreamHandler {
                     }
                 })
                 .filter(StrUtil::isNotEmpty) // 过滤空字串
-                // 代码生成完成后，同步构建项目（构建完成前 SSE 流不会结束，done 事件不会发送）
-                .concatWith(
-                        Flux.create(sink -> {
-                            // 在虚拟线程中执行阻塞构建，避免卡住 Reactor 线程
-                            Thread.ofVirtual().name("vue-builder-" + appId).start(() -> {
-                                try {
-                                    sink.next("\n\n> **正在安装依赖并构建项目，请稍候...**\n\n");
-                                    String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + "/vue_project_" + appId;
-                                    boolean success = vueProjectBuilder.buildProject(projectPath);
-                                    if (success) {
-                                        sink.next("\n\n> **项目构建完成，预览已就绪！**\n\n");
-                                        log.info("Vue 项目构建完成，appId={}", appId);
-                                    } else {
-                                        sink.next("\n\n> **项目构建失败，预览可能无法显示**\n\n");
-                                        log.error("Vue 项目构建失败，appId={}", appId);
-                                    }
-                                } catch (Exception e) {
-                                    log.error("构建 Vue 项目时发生异常: {}", e.getMessage(), e);
-                                    sink.next("\n\n> **项目构建异常**\n\n");
-                                } finally {
-                                    sink.complete();
-                                }
-                            });
-                        })
-                )
                 .doOnComplete(() -> {
                     // 流式响应完成后，添加 AI 消息到对话历史
                     String aiResponse = chatHistoryStringBuilder.toString();

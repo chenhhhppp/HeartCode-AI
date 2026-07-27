@@ -13,6 +13,8 @@ spring:
       host: localhost
       port: 6379
       ttl: 3600
+      database: 0
+      password:
   session:
     store-type: redis
     timeout: 2592000
@@ -44,6 +46,7 @@ langchain4j:
       timeout: 6000s
       strict-json-schema: true
       response-format: json_object
+      max-retries: 3
     streaming-chat-model:
       api-key: <Your API Key>
       base-url: https://open.bigmodel.cn/api/coding/paas/v4

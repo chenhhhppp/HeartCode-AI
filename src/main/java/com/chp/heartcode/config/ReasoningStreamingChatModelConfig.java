@@ -1,6 +1,8 @@
 package com.chp.heartcode.config;
 
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import jakarta.annotation.Resource;
 import lombok.Data;
@@ -8,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 import java.time.Duration;
 
@@ -29,12 +32,36 @@ public class ReasoningStreamingChatModelConfig {
 
     private String apiKey;
 
+    private String modelName;
+
+    private Integer maxTokens;
+
     /**
-     * 默认流式模型（用于 HTML / 多文件生成）
+     * 非流式模型（多文件生成的同步调用使用）—— 多例，避免并发阻塞
+     * <p>
+     * 覆盖 langchain4j starter 自动配置的单例 ChatModel Bean
+     */
+    @Bean
+    @Scope("prototype")
+    public ChatModel chatModel() {
+        return OpenAiChatModel.builder()
+                .apiKey(apiKey)
+                .baseUrl(baseUrl)
+                .modelName(modelName)
+                .maxTokens(maxTokens)
+                .timeout(Duration.ofSeconds(6000))
+                .logRequests(true)
+                .logResponses(true)
+                .build();
+    }
+
+    /**
+     * 默认流式模型（用于 HTML / 多文件生成）—— 多例，避免并发阻塞
      * <p>
      * 读取 streaming-chat-model 的配置属性
      */
     @Bean
+    @Scope("prototype")
     public StreamingChatModel defaultStreamingChatModel(
             @Value("${langchain4j.open-ai.streaming-chat-model.api-key}") String apiKey,
             @Value("${langchain4j.open-ai.streaming-chat-model.base-url}") String baseUrl,
@@ -52,11 +79,12 @@ public class ReasoningStreamingChatModelConfig {
     }
 
     /**
-     * 推理流式模型（用于 Vue 项目生成，带工具调用）
+     * 推理流式模型（用于 Vue 项目生成，带工具调用）—— 多例，避免并发阻塞
      * <p>
      * 复用 chat-model 的 apiKey / baseUrl 配置
      */
     @Bean
+    @Scope("prototype")
     public StreamingChatModel reasoningStreamingChatModel() {
         // 为了测试方便临时修改
         final String modelName = "glm-5.2";

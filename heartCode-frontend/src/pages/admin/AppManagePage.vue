@@ -232,33 +232,36 @@ onMounted(() => {
 </script>
 
 <template>
-  <div id="appManagePage" class="app-manage-container">
-    <!-- 搜索表单 -->
-    <a-form layout="inline" :model="searchParams" @finish="doSearch">
-      <a-form-item label="应用名称">
-        <a-input v-model:value="searchParams.appName" placeholder="输入应用名称" />
-      </a-form-item>
-      <a-form-item label="代码类型">
-        <a-select
-          v-model:value="searchParams.codeGenType"
-          placeholder="选择代码类型"
-          style="width: 120px"
-          allow-clear
-        >
-          <a-select-option value="html">HTML模式</a-select-option>
-          <a-select-option value="multi_file">多文件模式</a-select-option>
-          <a-select-option value="vue_project">Vue项目模式</a-select-option>
-        </a-select>
-      </a-form-item>
-      <a-form-item label="部署标识">
-        <a-input v-model:value="searchParams.deployKey" placeholder="输入部署标识" />
-      </a-form-item>
-      <a-form-item>
-        <a-button type="primary" html-type="submit">搜索</a-button>
-      </a-form-item>
-    </a-form>
-    <a-divider />
-    <!-- 表格 -->
+  <div id="appManagePage" class="manage-container">
+    <!-- 顶部标题 + 搜索卡片（琥珀渐变 + 点状纹理） -->
+    <div class="manage-header">
+      <div class="manage-header-title">应用管理</div>
+      <a-form layout="inline" :model="searchParams" @finish="doSearch" class="manage-header-form">
+        <a-form-item label="应用名称">
+          <a-input v-model:value="searchParams.appName" placeholder="输入应用名称" />
+        </a-form-item>
+        <a-form-item label="代码类型">
+          <a-select
+            v-model:value="searchParams.codeGenType"
+            placeholder="选择代码类型"
+            style="width: 120px"
+            allow-clear
+          >
+            <a-select-option value="html">HTML模式</a-select-option>
+            <a-select-option value="multi_file">多文件模式</a-select-option>
+            <a-select-option value="vue_project">Vue项目模式</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="部署标识">
+          <a-input v-model:value="searchParams.deployKey" placeholder="输入部署标识" />
+        </a-form-item>
+        <a-form-item>
+          <a-button type="primary" html-type="submit">搜索</a-button>
+        </a-form-item>
+      </a-form>
+    </div>
+    <!-- 表格卡片 -->
+    <div class="manage-table-card">
     <a-table
       :columns="columns"
       :data-source="data"
@@ -345,14 +348,65 @@ onMounted(() => {
         </template>
       </template>
     </a-table>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.app-manage-container {
+/* 页面容器：浅灰背景，让卡片更突出 */
+.manage-container {
   padding: 20px;
-  background: #fff;
+  background: #f5f5f5;
   min-height: 100%;
+}
+
+/* 顶部标题 + 搜索卡片：参考 UiH 琥珀渐变 + 点状纹理 + 圆角阴影 */
+.manage-header {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 28px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #fdc56b 0%, #ffbb4e 100%);
+  box-shadow: 0 4px 16px rgba(255, 187, 78, 0.35);
+}
+
+/* 点状纹理叠加层 */
+.manage-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+  pointer-events: none;
+}
+
+.manage-header-title {
+  position: relative;
+  font-size: 22px;
+  font-weight: 700;
+  color: #5a3d1b;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.manage-header-form {
+  position: relative;
+}
+
+/* 表格卡片：透明，融入页面背景（原白底大框已隐藏） */
+.manage-table-card {
+  margin-top: 20px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* antd 表格内部背景透明，避免残留白色大框 */
+.manage-table-card :deep(.ant-table),
+.manage-table-card :deep(.ant-table-wrapper),
+.manage-table-card :deep(.ant-table-container) {
+  background: transparent !important;
 }
 
 .text-gray {

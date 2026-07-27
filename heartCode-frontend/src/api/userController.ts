@@ -14,6 +14,18 @@ export async function addUser(body: API.UserAddRequest, options?: { [key: string
   })
 }
 
+/** 此处后端没有提供注释 POST /user/avatar/upload */
+export async function uploadAvatar(body: {}, options?: { [key: string]: any }) {
+  return request<API.BaseResponseString>('/user/avatar/upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
+
 /** 此处后端没有提供注释 POST /user/delete */
 export async function deleteUser(body: API.DeleteRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean>('/user/delete', {
@@ -132,21 +144,6 @@ export async function updateMyProfile(
       'Content-Type': 'application/json',
     },
     data: body,
-    ...(options || {}),
-  })
-}
-
-/** 上传用户头像 POST /user/avatar/upload */
-export async function uploadAvatar(
-  file: File,
-  options?: { [key: string]: any }
-) {
-  const formData = new FormData()
-  formData.append('file', file)
-  return request<API.BaseResponseString>('/user/avatar/upload', {
-    method: 'POST',
-    data: formData,
-    // 注意：FormData 不要手动设置 Content-Type，axios 会自动带 boundary
     ...(options || {}),
   })
 }

@@ -8,6 +8,8 @@ import com.chp.heartcode.ai.model.message.StreamMessageTypeEnum;
 import com.chp.heartcode.ai.model.message.ToolExecutedMessage;
 import com.chp.heartcode.ai.model.message.ToolRequestMessage;
 import com.chp.heartcode.config.AiCodeGeneratorServiceFactory;
+import com.chp.heartcode.constant.AppConstant;
+import com.chp.heartcode.core.builder.VueProjectBuilder;
 import com.chp.heartcode.core.parser.CodeParserExecutor;
 import com.chp.heartcode.core.saver.CodeFileSaverExecutor;
 import com.chp.heartcode.exception.BusinessException;
@@ -37,6 +39,9 @@ public class AiCodeGeneratorFacade {
 
     @Resource
     private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
+
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     /**
      * 统一入口：根据类型生成并保存代码
@@ -96,7 +101,7 @@ public class AiCodeGeneratorFacade {
                 // Vue 工程模式下，文件由 FileWriteTool 工具直接写入磁盘，
                 // TokenStream 能实时暴露 AI 文本 + 工具调用事件，通过 processTokenStream 转为 Flux
                 TokenStream tokenStream = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
-                yield processTokenStream(tokenStream);
+                yield processTokenStream(tokenStream, appId);
             }
             default -> {
                 String errorMessage = "不支持的生成类型：" + codeGenTypeEnum.getValue();
@@ -150,9 +155,10 @@ public class AiCodeGeneratorFacade {
      * 将 TokenStream 转换为 Flux<String>，并传递工具调用信息
      *
      * @param tokenStream TokenStream 对象
+     * @param appId       应用 ID
      * @return Flux<String> 流式响应
      */
-    private Flux<String> processTokenStream(TokenStream tokenStream) {
+    private Flux<String> processTokenStream(TokenStream tokenStream, Long appId) {
         return Flux.create(sink -> {
             tokenStream.onPartialResponse((String partialResponse) -> {
                         AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
@@ -174,6 +180,9 @@ public class AiCodeGeneratorFacade {
                         log.info("工具请求完成，已发送代码内容，工具名: {}", toolExecutionRequest.name());
                     })
                     .onCompleteResponse((ChatResponse response) -> {
+                        // 执行 Vue 项目构建（同步执行，确保预览时项目已就绪）
+                        String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + "vue_project_" + appId;
+                        vueProjectBuilder.buildProject(projectPath);
                         sink.complete();
                     })
                     .onError((Throwable error) -> {

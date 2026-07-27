@@ -20,4 +20,9 @@ public interface UserConstant {
      * 管理员角色
      */
     String ADMIN_ROLE = "admin";
+
+    /**
+     * 用户默认头像
+     */
+    String DEFAULT_AVATAR = "https://game-1255653016.file.myqcloud.com/manage/compress/custom_wzry_E1/e085141af66d62fb752abc552f93f68a.jpg?imageMogr2/crop/150x150/gravity/center";
 }

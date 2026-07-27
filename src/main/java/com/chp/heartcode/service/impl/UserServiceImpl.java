@@ -24,6 +24,7 @@ import java.util.List;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
+import static com.chp.heartcode.constant.UserConstant.DEFAULT_AVATAR;
 import static com.chp.heartcode.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
@@ -63,7 +64,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUserAccount(userAccount);
         user.setUserPassword(encryptPassword);
         user.setUserName("无名");
-        user.setUserRole(UserRoleEnum.USER.getValue());
+        user.setUserAvatar(DEFAULT_AVATAR);
+        user.setUserRole(UserRoleEnum.ADMIN.getValue());
         boolean saveResult = this.save(user);
         if (!saveResult) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败");

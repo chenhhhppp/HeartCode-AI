@@ -1,6 +1,7 @@
 package com.chp.heartcode.config;
 
 import com.chp.heartcode.ai.AiCodeGeneratorService;
+import com.chp.heartcode.ai.guardrail.PromptSafetyInputGuardrail;
 import com.chp.heartcode.ai.tools.ToolManager;
 import com.chp.heartcode.exception.BusinessException;
 import com.chp.heartcode.exception.ErrorCode;
@@ -17,6 +18,7 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -43,14 +45,14 @@ import java.time.Duration;
 @Configuration
 public class AiCodeGeneratorServiceFactory {
 
+    /**
+     * Spring 应用上下文，用于每次创建 AI 服务时从容器获取全新的多例（prototype）模型实例。
+     * <p>
+     * 模型 Bean 已声明为 @Scope("prototype")，每次 getBean 都返回独立实例，
+     * 底层 HttpClient 不再共享，从而彻底解决并发串行阻塞问题。
+     */
     @Resource
-    private ChatModel chatModel;
-
-    @Resource
-    private StreamingChatModel defaultStreamingChatModel;
-
-    @Resource
-    private StreamingChatModel reasoningStreamingChatModel;
+    private ApplicationContext applicationContext;
 
     @Resource
     private RedisChatMemoryStore redisChatMemoryStore;
@@ -137,23 +139,33 @@ public class AiCodeGeneratorServiceFactory {
                 .build();
         // 从数据库加载历史对话到记忆中
         chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, 20);
-        // 根据代码生成类型选择不同的模型配置
+
+        // 每次从 Spring 容器获取全新的多例模型实例（prototype），彻底避免并发阻塞
         return switch (codeGenType) {
             // Vue 项目生成使用推理模型，通过工具管理器绑定全套文件操作工具
-            case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
-                    .streamingChatModel(reasoningStreamingChatModel)
-                    .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(toolManager.getAllTools())
-                    .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
-                            toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
-                    ))
-                    .build();
+            case VUE_PROJECT -> {
+                StreamingChatModel reasoningModel = applicationContext.getBean("reasoningStreamingChatModel", StreamingChatModel.class);
+                yield AiServices.builder(AiCodeGeneratorService.class)
+                        .streamingChatModel(reasoningModel)
+                        .chatMemoryProvider(memoryId -> chatMemory)
+                        .tools((Object[]) toolManager.getAllTools())
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+                        .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
+                                toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
+                        ))
+                        .build();
+            }
             // HTML 和多文件生成使用默认模型
-            case HTML, MULTI_FILE -> AiServices.builder(AiCodeGeneratorService.class)
-                    .chatModel(chatModel)
-                    .streamingChatModel(defaultStreamingChatModel)
-                    .chatMemory(chatMemory)
-                    .build();
+            case HTML, MULTI_FILE -> {
+                ChatModel chatModel = applicationContext.getBean("chatModel", ChatModel.class);
+                StreamingChatModel defaultStreamingModel = applicationContext.getBean("defaultStreamingChatModel", StreamingChatModel.class);
+                yield AiServices.builder(AiCodeGeneratorService.class)
+                        .chatModel(chatModel)
+                        .streamingChatModel(defaultStreamingModel)
+                        .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
+                        .build();
+            }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,
                     "不支持的代码生成类型: " + codeGenType.getValue());
         };

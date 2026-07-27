@@ -463,6 +463,7 @@ const sendMessage = async (msg?: string) => {
     let fullContent = ''
     let buffer = '' // 缓冲区，用于处理不完整的数据块
     let chunkCount = 0 // 用于计算进度
+    let currentEventType = '' // 跟踪当前 SSE 事件类型
 
     while (true) {
       const { done, value } = await reader.read()
@@ -485,6 +486,7 @@ const sendMessage = async (msg?: string) => {
         // 处理事件行: event: done
         if (trimmedLine.startsWith('event:')) {
           const eventName = trimmedLine.slice(6).trim()
+          currentEventType = eventName
           console.log('事件类型:', eventName)
           if (eventName === 'done') {
             // 收到完成事件
@@ -529,6 +531,10 @@ const sendMessage = async (msg?: string) => {
             // 生成完成后滚动到底部
             await scrollToBottom()
           }
+          // 重置事件类型标记（已消费）
+          if (currentEventType === 'done' || currentEventType === 'business-error') {
+            currentEventType = ''
+          }
         }
         // 处理数据行: data: {"data": "chunk"}
         else if (trimmedLine.startsWith('data:')) {
@@ -536,6 +542,26 @@ const sendMessage = async (msg?: string) => {
 
           // 跳过空数据
           if (!data) continue
+
+          // 处理 business-error 事件的数据行（后端限流等错误）
+          if (currentEventType === 'business-error') {
+            currentEventType = ''
+            try {
+              const errorData = JSON.parse(data)
+              console.error('SSE业务错误事件:', errorData)
+              // 显示具体的错误信息
+              const errorMessage = errorData.message || '生成过程中出现错误'
+              currentAiMessage.content = `❌ ${errorMessage}`
+              currentAiMessage.displayedContent = `❌ ${errorMessage}`
+              currentAiMessage.isStreaming = false
+              message.error(errorMessage)
+              isGenerating.value = false
+              progressStatus.value = 'exception'
+            } catch (parseError) {
+              console.error('解析错误事件失败:', parseError, '原始数据:', data)
+            }
+            continue
+          }
 
           try {
             const parsed = JSON.parse(data)
