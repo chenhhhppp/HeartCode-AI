@@ -187,9 +187,6 @@ HeartCode/
 │   └── create_table.sql             # 数据库建表脚本
 └── pom.xml                          # Maven 依赖配置
 ```
-<img width="1012" height="1344" alt="image" src="https://github.com/user-attachments/assets/97ef4bf7-bdb6-4da3-a297-8f23fadf3cfa" />
-<img width="1004" height="1401" alt="image" src="https://github.com/user-attachments/assets/860fa31d-8668-437b-90dd-a737ce70fbba" />
-
 
 
 ## 快速开始
