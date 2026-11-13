@@ -96,7 +96,7 @@ flowchart TB
 
     S1 & S2 --> LLM["智谱 GLM LangChain4j"]
     S3 --> AG["🤖 Agent 模式 5个文件工具"]
-    AG <-->|读写| FS["应用文件存储"]
+    AG -->|读写| FS["应用文件存储"]
 
     LLM -->|TokenStream 流式| SSE["SSE 推送 自定义封装格式"]
 
@@ -114,7 +114,7 @@ flowchart TB
 
     S3 --> DEP["一键部署 deployKey"]
 ```
-```
+
 
 ### AI 代码生成核心架构
 
