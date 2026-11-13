@@ -222,48 +222,39 @@ Vue 工程模式下，AI 以智能体身份自主调用 5 个文件操作工具�
 
 ## 项目结构
 
-```mermaid
-flowchart TD
-    ROOT["HeartCode 项目根目录"]
-
-    ROOT --> JAVA["java 后端源码"]
-    ROOT --> RES["resources 资源目录"]
-    ROOT --> FE["heartcode-frontend 前端项目"]
-    ROOT --> SQL["sql 数据库脚本"]
-    ROOT --> POM["pom.xml Maven 依赖"]
-
-    JAVA --> AI["ai 包 AI 核心层"]
-    JAVA --> CORE["core 包 代码生成核心"]
-    JAVA --> CONFIG["config 包 配置类"]
-    JAVA --> CTRL["controller 包 控制器"]
-    JAVA --> SVC["service 包 业务逻辑"]
-    JAVA --> AOP["aop 包 权限切面"]
-    JAVA --> RL2["ratelimiter 包 限流组件"]
-
-    AI --> AI1["guardrail 安全护栏"]
-    AI --> AI2["model AI 消息模型"]
-    AI --> AI3["tools Agent 文件工具"]
-    AI --> AI4["AiCodeGeneratorService 接口"]
-
-    CORE --> C1["builder 项目构建器"]
-    CORE --> C2["handler 流处理器"]
-    CORE --> C3["parser 代码解析器"]
-    CORE --> C4["saver 文件保存器"]
-    CORE --> C5["AiCodeGeneratorFacade 门面层"]
-
-    CONFIG --> CF["ServiceFactory AI 服务工厂"]
-
-    RES --> R1["prompt 系统提示词 4 种模式"]
-    RES --> R2["application.yml 应用配置"]
-
-    FE --> FES["src"]
-    FES --> F1["pages 页面组件"]
-    FES --> F2["components 公共组件"]
-    FES --> F3["stores Pinia 状态管理"]
-    FES --> F4["api API 请求层"]
-    FES --> F5["utils 工具类 含可视化编辑器"]
-
-    SQL --> S1["create_table 建表脚本"]
+```text
+HeartCode/
+├── src/main/java/com/chp/heartcode/
+│   ├── ai/                        # AI 核心层
+│   │   ├── guardrail/             # 安全护栏（输入/输出）
+│   │   ├── model/                 # AI 消息模型
+│   │   ├── tools/                 # Agent 工具（文件操作）
+│   │   └── AiCodeGeneratorService.java   # AI 服务接口
+│   ├── core/                      # 代码生成核心
+│   │   ├── builder/               # 项目构建器
+│   │   ├── handler/               # 流处理器
+│   │   ├── parser/                # 代码解析器
+│   │   ├── saver/                 # 文件保存器
+│   │   └── AiCodeGeneratorFacade.java    # 门面层
+│   ├── config/                    # 配置类
+│   │   └── AiCodeGeneratorServiceFactory.java  # AI 服务工厂
+│   ├── controller/                # 控制器
+│   ├── service/                   # 业务逻辑
+│   ├── aop/                       # 权限切面
+│   └── ratelimiter/               # 限流组件
+├── src/main/resources/
+│   ├── prompt/                    # 系统提示词（4 种模式）
+│   └── application.yml            # 应用配置
+├── heartcode-frontend/            # 前端项目
+│   └── src/
+│       ├── pages/                 # 页面组件
+│       ├── components/            # 公共组件
+│       ├── stores/                # Pinia 状态管理
+│       ├── api/                   # API 请求层
+│       └── utils/                 # 工具类（含可视化编辑器）
+├── sql/
+│   └── create_table.sql           # 数据库建表脚本
+└── pom.xml                        # Maven 依赖配置
 ```
 
 ## 快速开始
