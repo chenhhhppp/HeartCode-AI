@@ -84,6 +84,38 @@ HeartCode 心码是一个 AI 驱动的应用生成平台（对标 美团-NoCode�
    MySQL       Redis      腾讯云COS    AI大模型
   (持久化)    (缓存/记忆)  (文件存储)  (GLM-5.2)
 ```
+flowchart TB
+    U[👤 用户] -->|对话需求| FE[Vue 3 前端<br/>可视化编辑器 + 打字机渲染]
+    FE -->|HTTP / SSE| BE[Spring Boot 3 后端<br/>Java 21 虚拟线程]
+
+    subgraph 核心链路
+        BE --> F[Facade 门面<br/>统一入口]
+        F --> FC[Factory 工厂]
+        FC --> S1[策略: 原生 HTML]
+        FC --> S2[策略: 多文件]
+        FC --> S3[策略: Vue 工程]
+    end
+
+    S1 & S2 --> LLM[智谱 GLM<br/>LangChain4j]
+    S3 --> AG[🤖 Agent 模式<br/>5 个 @Tool 文件工具]
+    AG <-->|读写| FS[应用文件存储]
+
+    LLM -->|TokenStream 流式| SSE[SSE 推送<br/>自定义封装格式]
+
+    subgraph 安全与稳定
+        RL[Redisson 令牌桶<br/>用户/IP/接口三维度]
+        G[输入/输出双向护栏<br/>+ DOMPurify]
+        PM[会话/角色/资源<br/>三层权限]
+    end
+
+    BE -.-> RL & G & PM
+    BE --> M[(MySQL<br/>全量对话历史)]
+    BE --> R[(Redis<br/>20 条热记忆)]
+    BE --> COS[腾讯云 COS<br/>封面图/静态资源]
+    BE --> SF[Selenium 无头浏览器<br/>自动截图]
+
+    S3 --> DEP[一键部署<br/>deployKey]
+```
 
 ### AI 代码生成核心架构
 
@@ -147,6 +179,51 @@ Vue 工程模式下，AI 以智能体身份自主调用 5 个文件操作工具�
 - **分布式限流**：Redisson 令牌桶（用户级 / IP 级 / 接口级）
 - **路径穿越防护**：静态资源访问目录校验
 - **三层权限**：会话层 + 角色层 + 资源层
+
+```
+sequenceDiagram
+    participant U as 用户
+    participant A as AI Agent
+    participant T as @Tool 工具集
+    participant FS as 工程文件
+
+    U->>A: "把首页按钮改成渐变色"
+    A->>T: readDirectory("src/")
+    T-->>A: 文件列表
+    A->>T: readFile("Home.vue")
+    T-->>A: 源码内容
+    A->>A: 思考: 定位到按钮代码
+    A->>T: replaceText("Home.vue", 旧片段, 新片段)
+    T->>FS: 精确替换并落盘
+    T-->>A: ✅ 成功
+    A-->>U: "已修改，预览已刷新"
+```
+flowchart LR
+    Q[对话记忆需求:<br/>多轮修改不丢上下文] --> A{放哪?}
+    A -->|只放 Redis| B[❌ 内存贵 + 实例重启/淘汰丢数据]
+    A -->|只放 MySQL| C[❌ 每轮对话全量查库,延迟高]
+    A -->|双存储 ✅| D[Redis 挡读 + MySQL 兜底]
+    D --> E[读: 先查 Redis<br/>20 条滑动窗口]
+    E --> F{命中?}
+    F -->|是| G[直接拼 Prompt]
+    F -->|否/过期| H[MySQL 回灌全量<br/>重建 Redis 窗口]
+    H --> G
+```
+flowchart LR
+    subgraph 主页面
+        E[可视化编辑器]
+        C[对话输入框]
+    end
+    subgraph iframe 预览
+        P[生成的应用]
+        L[点击监听器]
+    end
+    P --> L
+    L -->|"postMessage: 点击元素的<br/>selector/文本/位置"| E
+    E -->|高亮选中 + 注入隐藏脚本| P
+    E --> C[元素上下文静默附加到消息<br/>用户只管说'改这个']
+    C --> AI[AI 精准定位目标元素]
+```
 
 ## 项目结构
 
